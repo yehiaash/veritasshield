@@ -144,15 +144,16 @@ class Neo4jConnection:
                 id_a=clause_id_a, id_b=clause_id_b, score=round(score, 4)
             )
 
-    def create_contradicts(self, clause_id_a: int, clause_id_b: int, reason: str) -> None:
+    def create_contradicts(self, clause_id_a: int, clause_id_b: int, reason: str, score: int = 0) -> None:
         with self._driver.session() as s:
             s.run(
                 '''
                 MATCH (a:Clause {id: $id_a}), (b:Clause {id: $id_b})
                 MERGE (a)-[r:CONTRADICTS]->(b)
                 SET r.reason = $reason
+                SET r.score = $score
                 ''',
-                id_a=clause_id_a, id_b=clause_id_b, reason=reason
+                id_a=clause_id_a, id_b=clause_id_b, reason=reason, score=score
             )
 
     def get_conflicts_for_document(self, doc_id: int) -> list[dict]:

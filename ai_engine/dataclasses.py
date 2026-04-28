@@ -79,3 +79,9 @@ class AnalysisResult:
                 print(f"  Reason : {c.reason}")
         else:
             print('\n  ✓ No conflicts detected.')
+
+@dataclass
+class Clause:
+    clause_id: int
+    clause_text: str
+    clause_type: str
