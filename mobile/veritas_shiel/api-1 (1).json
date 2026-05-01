@@ -1,0 +1,928 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "VeritasShield API",
+    "contact": {
+      "name": "VeritasShield Teams"
+    },
+    "version": "1.0.0",
+    "description": "API for VeritasShield - a document analysis platform that provides OCR processing,\nclause extraction, similarity matching, and conflict detection between documents.\n",
+    "x-fiddle-import-file": true
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/analyze/": {
+      "post": {
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Analyze a document",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            },
+            "description": "Analysis completed successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No file provided or validation error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Analysis processing failed"
+          }
+        },
+        "description": "Uploads a document, performs OCR to extract text, analyzes the content to extract clauses,\nfinds similar clauses across existing documents, and detects conflicts.\n",
+        "operationId": "analyzeDocument",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Document file to analyze (PDF, JPG, PNG, JPEG)"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Document title (defaults to filename if not provided)"
+                  },
+                  "language": {
+                    "type": "string",
+                    "default": "en",
+                    "description": "Document language for OCR processing"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/auth/login/": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "User login",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            },
+            "description": "Login successful"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid credentials"
+          }
+        },
+        "description": "Authenticates a user with email and password, returns JWT token pair.",
+        "operationId": "authLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/auth/logout/": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "User logout",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "205": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "AuthLogoutUnknown",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Logged out successfully"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Logged out successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Missing or invalid refresh token"
+          }
+        },
+        "description": "Blacklists the provided refresh token to log the user out.",
+        "operationId": "authLogout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refresh"
+                ],
+                "properties": {
+                  "refresh": {
+                    "type": "string",
+                    "description": "Refresh token to blacklist"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/analyze/save/": {
+      "post": {
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Save analysis results",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            },
+            "description": "Analysis saved successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid doc_id or document has no raw_text"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Document not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Save/insertion failed"
+          }
+        },
+        "description": "Saves/inserts the analysis results for a previously uploaded document.\nFetches the document, validates its text content, and persists the analysis.\n",
+        "operationId": "analyzeSave",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "doc_id"
+                ],
+                "properties": {
+                  "doc_id": {
+                    "type": "integer",
+                    "description": "ID of the document to save analysis for"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/auth/refresh/": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Refresh access token",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "AuthRefreshOk",
+                  "properties": {
+                    "access": {
+                      "type": "string",
+                      "description": "New JWT access token"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Token refreshed successfully"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid or expired refresh token"
+          }
+        },
+        "description": "Returns a new access token using a valid refresh token.",
+        "operationId": "authRefresh",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refresh"
+                ],
+                "properties": {
+                  "refresh": {
+                    "type": "string",
+                    "description": "Valid refresh token"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/auth/register/": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register a new user",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            },
+            "description": "User registered successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input (missing fields or email already exists)"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "User creation failed"
+          }
+        },
+        "description": "Creates a new user account and returns JWT token pair.",
+        "operationId": "authRegister",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/files/documents/": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "List all documents",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Document"
+                  },
+                  "title": "DocumentsListOk"
+                }
+              }
+            },
+            "description": "List of documents"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Admin privileges required"
+          }
+        },
+        "description": "Returns a list of all documents. Requires authentication.",
+        "operationId": "documentsList"
+      }
+    },
+    "/clauses/{clause_id}/": {
+      "get": {
+        "tags": [
+          "Clauses"
+        ],
+        "summary": "Get clause analysis",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "ClauseAnalysisOk",
+                  "properties": {
+                    "clause_details": {
+                      "type": "object",
+                      "description": "Detailed clause analysis results"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Clause analysis details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Clause not found"
+          }
+        },
+        "description": "Returns detailed analysis for a specific clause.",
+        "operationId": "clauseAnalysis"
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "clause_id",
+          "schema": {
+            "type": "integer"
+          },
+          "required": true,
+          "description": "Clause ID"
+        }
+      ]
+    },
+    "/files/documents/{id}/": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Retrieve a document",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            },
+            "description": "Document details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Document not found"
+          }
+        },
+        "description": "Returns details of a specific document by ID. Requires authentication.",
+        "operationId": "documentsRetrieve"
+      },
+      "put": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Update a document",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            },
+            "description": "Document updated successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid data"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Document not found"
+          }
+        },
+        "description": "Updates an existing document. Requires authentication.",
+        "operationId": "documentsUpdate",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Replacement document file"
+                  },
+                  "lang": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "file_extension": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Delete a document",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Document deleted successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Document not found"
+          }
+        },
+        "description": "Deletes a document by ID. Requires authentication.",
+        "operationId": "documentsDestroy"
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "schema": {
+            "type": "integer"
+          },
+          "required": true,
+          "description": "Document ID"
+        }
+      ]
+    },
+    "/files/documents/{doc_id}/clauses/": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Get document clauses",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Clause"
+                  },
+                  "title": "DocumentClausesOk"
+                }
+              }
+            },
+            "description": "List of clauses for the document"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Document or clauses not found"
+          }
+        },
+        "description": "Returns all extracted clauses for a specific document.",
+        "operationId": "documentClauses"
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "doc_id",
+          "schema": {
+            "type": "integer"
+          },
+          "required": true,
+          "description": "Document ID"
+        }
+      ]
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
+      "Clause": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string",
+            "description": "The clause text content"
+          },
+          "clause_type": {
+            "type": "string",
+            "description": "Type/category of the clause"
+          }
+        }
+      },
+      "Conflict": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "number",
+            "format": "float",
+            "maximum": 1,
+            "minimum": 0,
+            "description": "Conflict confidence score"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Explanation of why a conflict was detected"
+          },
+          "new_clause_id": {
+            "type": "integer"
+          },
+          "new_clause_text": {
+            "type": "string"
+          },
+          "existing_clause_id": {
+            "type": "integer"
+          },
+          "existing_doc_title": {
+            "type": "string"
+          },
+          "existing_clause_text": {
+            "type": "string"
+          }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "file": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL/path to the uploaded file"
+          },
+          "lang": {
+            "type": "string",
+            "default": "en",
+            "description": "Language of the document"
+          },
+          "user": {
+            "type": "integer",
+            "readOnly": true,
+            "description": "ID of the user who uploaded the document"
+          },
+          "title": {
+            "type": "string",
+            "description": "Document title"
+          },
+          "raw_text": {
+            "type": "string",
+            "description": "OCR-extracted raw text content"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float",
+            "description": "OCR confidence score"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "file_extension": {
+            "type": "string",
+            "description": "File extension of the uploaded document"
+          }
+        }
+      },
+      "TokenPair": {
+        "type": "object",
+        "properties": {
+          "access": {
+            "type": "string",
+            "description": "JWT access token"
+          },
+          "refresh": {
+            "type": "string",
+            "description": "JWT refresh token"
+          }
+        },
+        "description": "JWT access and refresh tokens"
+      },
+      "SimilarPair": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "number",
+            "format": "float",
+            "maximum": 1,
+            "minimum": 0,
+            "description": "Similarity score between the two clauses"
+          },
+          "new_clause_id": {
+            "type": "integer"
+          },
+          "new_clause_text": {
+            "type": "string"
+          },
+          "existing_clause_id": {
+            "type": "integer"
+          },
+          "existing_doc_title": {
+            "type": "string"
+          },
+          "existing_clause_text": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalysisResult": {
+        "type": "object",
+        "properties": {
+          "clauses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Clause"
+            }
+          },
+          "doc_type": {
+            "type": "string",
+            "description": "Detected document type"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Conflict"
+            }
+          },
+          "document_id": {
+            "type": "integer"
+          },
+          "similar_pairs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimilarPair"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "JWT access token obtained from /auth/login/ or /auth/register/",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User registration, login, token management, and logout"
+    },
+    {
+      "name": "Documents",
+      "description": "Document upload, retrieval, and management"
+    },
+    {
+      "name": "Analysis",
+      "description": "Document analysis, clause extraction, similarity detection, and conflict detection"
+    },
+    {
+      "name": "Clauses",
+      "description": "Individual clause analysis and details"
+    }
+  ]
+}
