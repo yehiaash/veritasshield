@@ -2,6 +2,8 @@ from typing import List, Dict, Optional, Any
 from ai_engine.db.neo4j_connection import Neo4jConnection
 from ai_engine.dataclasses import Clause, Conflict, SimilarityMatch
 
+from ai_engine.ai.liability_detector import LiabilityDetector
+
 class ClauseRepository:
     """
     Repository pattern for handling Clause data operations.
@@ -134,7 +136,8 @@ class ClauseRepository:
         response = {
             'Clause'        : clause_details,
             'Conflicts'     : conflicts,
-            'Similarities'  : similar 
+            'Similarities'  : similar, 
+            'Risk'          : LiabilityDetector().analyze_clause(clause_details.clause_text).get('risk_score', 0)
         }
 
         return response
